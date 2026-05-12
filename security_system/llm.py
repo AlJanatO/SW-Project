@@ -1,8 +1,14 @@
 import json
 import logging
 import os
+import ssl
 import urllib.request
+
+import certifi
+
 from db import run_sql
+
+ssl_context = ssl.create_default_context(cafile=certifi.where())
 
 log = logging.getLogger(__name__)
 
@@ -96,7 +102,8 @@ def _call_external_llm(context: dict):
         },
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=12) as resp:
+    ssl_context = ssl.create_default_context(cafile=certifi.where())
+    with urllib.request.urlopen(req, timeout=12, context=ssl_context) as resp:
         raw = json.loads(resp.read().decode("utf-8"))
     message = raw["choices"][0]["message"]["content"]
     parsed = _parse_llm_response(message)

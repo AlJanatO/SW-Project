@@ -1,6 +1,5 @@
 QUERIES = {
     "logs": "SELECT id, created_at, ip, endpoint, method, status_code, anomaly_type FROM requests ORDER BY id DESC LIMIT 25",
-    "health": "SELECT NOW()"
 }
 
 

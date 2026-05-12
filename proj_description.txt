@@ -1,0 +1,54 @@
+The project is a FastAPI and PostgreSQL-based web system that simulates
+both vulnerable and secure API behavior to demonstrate backend security
+risks and defenses in modern web applications.
+
+The system exposes multiple API services accessed through HTTP requests.
+Each request is routed through a FastAPI backend that handles validation,
+query execution, and logging of user interactions with a PostgreSQL database.
+
+A session context tracks request activity, including frequency, payloads,
+and database operations. Each endpoint connects to SQL queries that return
+or modify data based on user input.
+
+The system includes intentionally vulnerable endpoints that simulate risks
+such as SQL injection, recursive API calls, and resource exhaustion. These
+are used to demonstrate how insecure backend design can be exploited.
+
+A monitoring middleware layer analyzes incoming requests in real time. It
+detects abnormal behavior such as request flooding, suspicious payloads,
+and automated attack patterns, then logs or flags them as threats.
+
+Security defenses include input validation using Pydantic models,
+parameterized SQL queries to prevent injection attacks, and rate limiting
+to control excessive request usage.
+
+All activity, including normal and malicious requests, is logged for
+analysis and optional visualization in a frontend dashboard showing live
+system behavior and detected threats.
+
+Overall, the system demonstrates how web applications can combine service
+delivery with security monitoring to study backend vulnerabilities and
+defensive design patterns in real-world systems.
+
+Project FLow:
+Request → FastAPI middleware
+        ↓
+Fetch similar past attacks (Postgres)
+        ↓
+Send context + request to LLM
+        ↓
+LLM classifies threat
+        ↓
+Return: safe / suspicious / malicious
+
+API Visualizer:
+            ┌──────────────┐
+User ─────► │   FastAPI    │
+            └──────┬───────┘
+                   │
+     ┌─────────────┼─────────────┐
+     ▼             ▼             ▼
+ /query      /analyze       /
+(DB SQL)   (Security AI)  (Redirect)
+     ▼             ▼
+Postgres      RAG + detection

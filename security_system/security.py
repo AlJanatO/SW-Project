@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 
 LOG_STORE = []
@@ -54,7 +54,7 @@ def detect_anomaly(payload: dict):
 
 
 def rate_limit_exceeded(actor_key: str, max_requests: int, window_seconds: int) -> bool:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     window_start = now - timedelta(seconds=window_seconds)
     bucket = REQUEST_WINDOWS[actor_key]
     bucket[:] = [ts for ts in bucket if ts >= window_start]

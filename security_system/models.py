@@ -11,7 +11,7 @@ class AnalyzeRequest(BaseModel):
 
 class AnalyzeResponse(BaseModel):
     status: str
-    request_id: Optional[int]
+    request_id: Optional[int] = None
     session_id: str
     anomaly: str
     analysis: Dict[str, Any]

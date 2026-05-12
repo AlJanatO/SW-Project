@@ -14,16 +14,42 @@ def log_request(payload: dict):
 
 def detect_anomaly(payload: dict):
     text = str(payload).lower()
-
-    if "select " in text or "drop " in text or "' or '1'='1" in text:
-        return "SQL Injection Attempt"
-
-    if "http://" in text or "https://" in text and "/vuln/recursive" in text:
+ 
+    # SQL Injection patterns
+    sql_patterns = [
+        "select ", "drop ", "insert ", "delete ", "update ",
+        "union ", "' or '1'='1", "' or 1=1", "'; --", "' --",
+        "1=1", "or 1=1", "/*", "*/", "xp_", "exec(",
+        "char(", "cast(", "convert(", "@@version",
+    ]
+    for pattern in sql_patterns:
+        if pattern in text:
+            return "SQL Injection Attempt"
+ 
+    # XSS patterns
+    xss_patterns = ["<script", "javascript:", "onerror=", "onload=", "onclick=", "alert(", "eval("]
+    for pattern in xss_patterns:
+        if pattern in text:
+            return "XSS Attempt"
+ 
+    # Path traversal
+    if "../" in text or "..%2f" in text or "%2e%2e" in text:
+        return "Path Traversal Attempt"
+ 
+    # Command injection
+    cmd_patterns = ["; ls", "; cat", "| cat", "`cat", "$(", "; rm", "| rm"]
+    for pattern in cmd_patterns:
+        if pattern in text:
+            return "Command Injection Attempt"
+ 
+    # Recursive API abuse
+    if ("http://" in text or "https://" in text) and "/vuln/recursive" in text:
         return "Recursive API Abuse"
-
+ 
+    # Flood attack
     if len(text) > 1500:
         return "Possible Flood Attack"
-
+ 
     return "Normal"
 
 

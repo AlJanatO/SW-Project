@@ -22,7 +22,7 @@ class SecurityMiddleware:
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
-
+ 
         start_time = time.time()
         method = scope["method"]
         path = scope["path"]
@@ -42,7 +42,7 @@ class SecurityMiddleware:
             session_id = str(uuid.uuid4())
             new_session = True
         session_id = upsert_session(ip, user_agent, session_id)
-
+ 
         max_requests = int(os.getenv("RATE_LIMIT_REQUESTS", "60"))
         window_seconds = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"))
         actor_key = f"{ip}:{session_id}"
@@ -61,21 +61,55 @@ class SecurityMiddleware:
                 anomaly_type="Rate Limit Exceeded",
             )
             return
-
-        # Basic request info
+ 
+        # Buffer the request body so detect_anomaly can inspect it
+        body_chunks = []
+        async def receive_wrapper():
+            message = await receive()
+            if message.get("type") == "http.request":
+                body_chunks.append(message.get("body", b""))
+            return message
+ 
+        # Read the body by calling receive_wrapper before passing to the app
+        first_message = await receive_wrapper()
+        raw_body = b"".join(body_chunks)
+ 
+        # Try to parse body as text for anomaly inspection
+        body_text = ""
+        try:
+            body_text = raw_body.decode("utf-8", errors="replace")
+        except Exception:
+            body_text = ""
+ 
+        # Build payload with actual request content
         payload = {
             "method": method,
             "path": path,
             "ip": ip,
             "session_id": session_id,
+            "body": body_text,
         }
-
+ 
+        # Also include query string if present
+        query_string = scope.get("query_string", b"")
+        if query_string:
+            payload["query_string"] = query_string.decode("utf-8", errors="replace")
+ 
         # Run anomaly detection (real-time)
         risk = detect_anomaly(payload)
-
+ 
         print(f"[MONITOR] {method} {path} → {risk}")
         response_status = 200
-
+ 
+        # Replay the buffered body to the actual app
+        body_sent = False
+        async def replay_receive():
+            nonlocal body_sent
+            if not body_sent:
+                body_sent = True
+                return first_message
+            return await receive()
+ 
         async def send_wrapper(message):
             nonlocal response_status
             if message.get("type") == "http.response.start":
@@ -85,8 +119,8 @@ class SecurityMiddleware:
                     headers.append((b"set-cookie", f"session_id={session_id}; Path=/; HttpOnly; SameSite=Lax".encode("utf-8")))
                 message["headers"] = headers
             await send(message)
-
-        await self.app(scope, receive, send_wrapper)
+ 
+        await self.app(scope, replay_receive, send_wrapper)
         elapsed_ms = int((time.time() - start_time) * 1000)
         record_request(
             session_id=session_id,

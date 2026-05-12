@@ -10,9 +10,13 @@ def execute_query(name: str):
     query = get_query(name)
     if not query:
         return {"error": f"Query '{name}' not found"}
-
+ 
     result = run_sql(query)
-    return {"query": name, "rows": result}
+    # Convert datetime objects to strings for clean display
+    rows = []
+    for row in result:
+        rows.append(tuple(str(col) if hasattr(col, 'isoformat') else col for col in row))
+    return {"query": name, "rows": rows}
 
 
 def upsert_session(ip: str, user_agent: str, session_id: str = "") -> str:

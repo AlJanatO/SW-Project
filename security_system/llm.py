@@ -99,7 +99,7 @@ def _call_external_llm(context: dict):
     with urllib.request.urlopen(req, timeout=12) as resp:
         raw = json.loads(resp.read().decode("utf-8"))
     message = raw["choices"][0]["message"]["content"]
-    arsed = _parse_llm_response(message)
+    parsed = _parse_llm_response(message)
     return {
         "provider": "external",
         "classification": parsed["classification"],

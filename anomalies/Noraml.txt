@@ -1,0 +1,8 @@
+1. Legitimate login:
+
+
+{"path":"/login","method":"POST","payload":{"username":"john.doe","password":"MyS3cur3Pass!"}}
+2. Normal search:
+
+
+{"path":"/search","method":"GET","payload":{"q":"best restaurants near me"}}

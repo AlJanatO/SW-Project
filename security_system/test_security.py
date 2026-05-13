@@ -257,3 +257,92 @@ class TestQueries:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+# ── Integration tests (Controller / Service layer) ──
+ 
+from fastapi.testclient import TestClient
+ 
+ 
+class TestAPIEndpoints:
+    """Integration tests for API endpoints (Controller layer)."""
+ 
+    @pytest.fixture(autouse=True)
+    def setup_client(self):
+        """Set up test client. Requires DB connection."""
+        try:
+            from main import app
+            self.client = TestClient(app)
+            self.has_db = True
+        except Exception:
+            self.has_db = False
+ 
+    def test_root_returns_html(self):
+        if not self.has_db:
+            pytest.skip("Database not available")
+        response = self.client.get("/")
+        assert response.status_code == 200
+        assert "Security Monitoring System" in response.text
+ 
+    def test_api_root_returns_status(self):
+        if not self.has_db:
+            pytest.skip("Database not available")
+        response = self.client.get("/api/")
+        assert response.status_code == 200
+        assert response.json()["status"] == "Security System Running"
+ 
+    def test_analyze_valid_payload(self):
+        if not self.has_db:
+            pytest.skip("Database not available")
+        response = self.client.post("/api/analyze", json={
+            "path": "/login",
+            "method": "POST",
+            "payload": {"username": "admin", "password": "pass123"}
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "analyzed"
+        assert data["anomaly"] == "Normal"
+ 
+    def test_analyze_detects_sql_injection(self):
+        if not self.has_db:
+            pytest.skip("Database not available")
+        response = self.client.post("/api/analyze", json={
+            "path": "/login",
+            "method": "POST",
+            "payload": {"username": "admin' OR '1'='1", "password": "x"}
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert data["anomaly"] == "SQL Injection Attempt"
+ 
+    def test_analyze_rejects_invalid_payload(self):
+        if not self.has_db:
+            pytest.skip("Database not available")
+        response = self.client.post("/api/analyze", json={
+            "path": "",
+            "method": "POST"
+        })
+        assert response.status_code == 422
+ 
+    def test_dashboard_metrics_endpoint(self):
+        if not self.has_db:
+            pytest.skip("Database not available")
+        response = self.client.get("/api/dashboard/metrics")
+        assert response.status_code == 200
+        data = response.json()
+        assert "total_requests_24h" in data
+        assert "anomaly_requests_24h" in data
+ 
+    def test_health_check_endpoint(self):
+        if not self.has_db:
+            pytest.skip("Database not available")
+        response = self.client.get("/api/health")
+        assert response.status_code == 200
+        assert "System Health Check" in response.text
+ 
+    def test_logs_query_endpoint(self):
+        if not self.has_db:
+            pytest.skip("Database not available")
+        response = self.client.get("/api/query/logs")
+        assert response.status_code == 200
+        assert "Query Result" in response.text

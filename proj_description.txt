@@ -30,16 +30,10 @@ Overall, the system demonstrates how web applications can combine service
 delivery with security monitoring to study backend vulnerabilities and
 defensive design patterns in real-world systems.
 
-Project FLow:
-Request → FastAPI middleware
-        ↓
-Fetch similar past attacks (Postgres)
-        ↓
-Send context + request to LLM
-        ↓
-LLM classifies threat
-        ↓
-Return: safe / suspicious / malicious
+Request → FastAPI middleware → Rule-based anomaly detection → Log result to PostgreSQL
+
+User submits via /analyze → Rule-based detection + Fetch similar past attacks (RAG) 
+→ Send context to LLM → LLM classifies: safe / suspicious / attack → Return result
 
 API Visualizer:
             ┌──────────────┐

@@ -16,7 +16,7 @@ to service logic and database queries.
 
 The system supports:
 
-- Normal service operations (CRUD + queries)
+- Service operations (query execution and request logging)
 - Vulnerable endpoints (simulated insecure behavior)
 - Security monitoring middleware
 - Defensive security controls
@@ -24,11 +24,12 @@ The system supports:
 
 3. Functional Requirements
 3.1 Core API Services
-he system shall:
+The system shall:
 
 - Expose REST API endpoints using FastAPI
-- Execute SQL queries via PostgreSQL
-- Return structured JSON responses
+- Execute predefined SQL queries for request logs
+- Return structured JSON and HTML responses
+- Provide a system health check endpoint
 
 3.2 Vulnerable Simulation Layer
 The system shall:
@@ -37,14 +38,20 @@ The system shall:
 - Simulate SQL injection vulnerabilities
 - Allow recursive or heavy request endpoints
 - Demonstrate resource exhaustion scenarios
+- Vulnerable routes are disabled by default and enabled via the ENABLE_VULN_SIMULATION environment variable.
 
 3.3 Monitoring Layer
 The system shall:
 
-- Intercept all incoming requests via middleware
+- The middleware detects 6 specific anomaly types: SQL Injection, XSS, Path Traversal, Command Injection, 
+Recursive API Abuse, and Flood Attack. The SRS doesn't list these.
 - Log request metadata (IP, payload, frequency)
-- Detect abnormal request patterns
-- Flag potential malicious activity
+- Detect SQL injection patterns in request bodies and parameters
+- Detect XSS (cross-site scripting) attempts
+- Detect path traversal attacks
+- Detect command injection attempts
+- Detect recursive API abuse
+- Detect flood attacks via payload size analysis
 
 3.4 Defense Layer
 The system shall:
@@ -52,13 +59,14 @@ The system shall:
 - Validate inputs using Pydantic models
 - Use parameterized SQL queries
 - Apply rate limiting on endpoints
-- Prevent unsafe query execution
+- Log and flag detected threats for analysis
+- Vulnerable simulation endpoints intentionally bypass safety controls for educational demonstration.
 
 3.5 Logging System
 The system shall:
 
 - Store all requests in PostgreSQL
-- Track normal and malicious events
+- Track normal and attack events
 - Support analysis of attack patterns
 
 4. Non-Functional Requirements
@@ -78,7 +86,19 @@ Retrieval-Augmented Generation (RAG) approach.
 Instead of training a model, the system retrieves relevant context
 from stored logs and feeds it to the LLM.
 
-Flow Diagram (Logical)
+Two detection paths:
+ 
+Path 1 (All requests):
+  Request → Middleware → Rule-based detection → Log to PostgreSQL
+ 
+Path 2 (/api/analyze only):
+  User submits payload → Rule-based detection
+      → Retrieve similar past events from PostgreSQL (RAG)
+      → Send payload + context to LLM
+      → LLM classification + explanation
+      → Response returned + stored
+
+Flow Diagram (Logical)-for analyze endpoint only.
 API Request
      ↓
 FastAPI Middleware
@@ -100,18 +120,16 @@ Response returned + stored
 
 5.2 What is stored for retrieval:
 
-- past attack patterns
-- SQL injection examples
-- rate-limit violations
-- recursive request patterns
-- normal vs abnormal traffic logs
+- Previous requests from the same IP address
+- Requests with similar payload content (text-based matching)
+- Associated anomaly classifications from past detections
+- Request metadata (endpoint, method, timestamp)
 
 5.3 The LLM is used to:
 
-- classify requests as safe or malicious
-- explain reasoning in natural language
-- summarize system activity
-- assist debugging security events
+- classify requests as safe or an attack
+- Provide natural language explanations of threat assessments
+- Augment rule-based detection with contextual AI analysis
 
 Prompts:
 

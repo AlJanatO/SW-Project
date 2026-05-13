@@ -1,6 +1,6 @@
 # SW-Project
 
-# Breif Description:
+# Brief Description:
 
 This project is a FastAPI and PostgreSQL-based web system that simulates both
 vulnerable and secure API behavior to demonstrate common backend security risks
@@ -16,7 +16,7 @@ queries, and rate limiting. Optionally, an LLM-powered RAG pipeline analyzes
 incoming requests using past logs to classify threats as safe, suspicious, or
 malicious based on context retrieved from the database.
 
-# MVC MOdel
+# MVC Model
                  ┌──────────────────────┐
                  │      VIEW (API)      │
                  │  FastAPI Routes      │
@@ -35,10 +35,20 @@ malicious based on context retrieved from the database.
      ┌────────────────┐  ┌─────────────────┐
      │     MODEL      │  │   SECURITY LAYER │
      │ PostgreSQL DB  │  │ middleware + logs│
-     │ queries/data   │  │ threat detection  │
+     │ queries/data   │  │ threat detection 
+                        rule-based detection + LLM analysis │
      └────────────────┘  └─────────────────┘
 
 
 # Download dependencies
 
-pip install uvicorn fastapi psycopg2-binary python-dotenv
+pip install uvicorn fastapi psycopg2-binary python-dotenv certifi
+pip install pytest  # for running tests
+
+# How To Run
+
+How to set up PostgreSQL (DB_HOST, DB_NAME, DB_USER, DB_PASSWORD in .env)
+How to configure the LLM (LLM_API_URL, LLM_API_KEY, LLM_MODEL in .env)
+How to enable vulnerable endpoints (ENABLE_VULN_SIMULATION=true)
+How to run the server (python -m uvicorn main:app --reload)
+How to run tests (cd security_system && python -m pytest test_security.py -v)

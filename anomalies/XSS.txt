@@ -1,0 +1,5 @@
+{"path":"/comment","method":"POST","payload":{"text":"<script>alert('xss')</script>"}}
+{"path":"/profile/update","method":"POST","payload":{"bio":"<img src=x onerror=alert(1)>"}}
+{"path":"/search","method":"GET","payload":{"q":"<svg onload=alert('xss')>"}}
+{"path":"/feedback","method":"POST","payload":{"message":"<iframe src='javascript:alert(1)'></iframe>"}}
+{"path":"/chat/send","method":"POST","payload":{"content":"<body onload=alert('owned')>"}}

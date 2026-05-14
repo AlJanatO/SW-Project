@@ -1,3 +1,18 @@
+# environment
 .env
 venv/
+
+# Python cache
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# macOS
+.DS_Store
+
+# pytest
+.pytest_cache/
+
+# logs (optional but good)
+*.log

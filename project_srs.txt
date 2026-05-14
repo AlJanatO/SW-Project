@@ -43,8 +43,7 @@ The system shall:
 3.3 Monitoring Layer
 The system shall:
 
-- The middleware detects 6 specific anomaly types: SQL Injection, XSS, Path Traversal, Command Injection, 
-Recursive API Abuse, and Flood Attack. The SRS doesn't list these.
+- Detect and label common anomaly types: SQL Injection, XSS, Path Traversal, Command Injection, Recursive API Abuse, and Flood Attack.
 - Log request metadata (IP, payload, frequency)
 - Detect SQL injection patterns in request bodies and parameters
 - Detect XSS (cross-site scripting) attempts

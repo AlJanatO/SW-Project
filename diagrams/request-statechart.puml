@@ -1,0 +1,112 @@
+@startuml
+title Security Monitoring System - Request Statechart
+skinparam shadowing false
+
+[*] --> RequestReceived : HTTP request reaches FastAPI
+
+state RequestReceived {
+  [*] --> CapturePath
+  CapturePath --> CaptureMethod : read route and HTTP method
+  CaptureMethod --> BufferBody : preserve request body for route handler
+  BufferBody --> [*]
+}
+
+RequestReceived --> SessionChecked : middleware begins tracking
+
+state SessionChecked {
+  [*] --> ReadSessionId
+  ReadSessionId --> ExistingSession : session id found
+  ReadSessionId --> NewSession : no session id found
+  ExistingSession --> UpdateSessionStats : increment request count
+  NewSession --> CreateSessionRecord : create new session row
+  UpdateSessionStats --> [*]
+  CreateSessionRecord --> [*]
+}
+
+SessionChecked --> RateLimitChecked : session identity resolved
+
+state RateLimitChecked {
+  [*] --> CountRecentRequests
+  CountRecentRequests --> LimitExceeded : request count above threshold
+  CountRecentRequests --> LimitAllowed : request count within threshold
+}
+
+RateLimitChecked --> RateLimitResponse : limit exceeded
+
+state RateLimitResponse {
+  [*] --> Build429Response
+  Build429Response --> BuildRateLimitDefense : action = blocked
+  BuildRateLimitDefense --> [*]
+}
+
+RateLimitResponse --> RequestLogged : blocked request still recorded
+RateLimitChecked --> PayloadInspected : allowed
+
+state PayloadInspected {
+  [*] --> RuleClassification
+
+  state RuleClassification {
+    [*] --> PatternScan
+    PatternScan --> SQLInjection : SQL keywords or tautology found
+    PatternScan --> XSS : script or event handler found
+    PatternScan --> PathTraversal : ../ or sensitive path found
+    PatternScan --> CommandInjection : shell operator found
+    PatternScan --> RecursiveAPIAbuse : recursive endpoint behavior found
+    PatternScan --> FloodAttack : oversized payload found
+    PatternScan --> NormalTraffic : no attack pattern found
+  }
+
+  SQLInjection --> DefenseBuilt : critical severity
+  XSS --> DefenseBuilt : high severity
+  PathTraversal --> DefenseBuilt : high severity
+  CommandInjection --> DefenseBuilt : critical severity
+  RecursiveAPIAbuse --> DefenseBuilt : medium severity
+  FloodAttack --> DefenseBuilt : medium severity
+  NormalTraffic --> DefenseBuilt : low severity
+
+  state DefenseBuilt {
+    [*] --> SelectAction
+    SelectAction --> AddRule
+    AddRule --> AddReason
+    AddReason --> AddRecommendation
+    AddRecommendation --> [*]
+  }
+}
+
+PayloadInspected --> RouteHandlerRuns : request continues to endpoint
+
+state RouteHandlerRuns {
+  [*] --> ValidateAnalyzeRequest
+  ValidateAnalyzeRequest --> RecordRequest : Pydantic model valid
+  ValidateAnalyzeRequest --> ValidationError : invalid request body
+
+  RecordRequest --> RetrieveContext : store request event
+  RetrieveContext --> LLMAttempt : collect prior PostgreSQL context
+
+  state LLMAttempt {
+    [*] --> CheckLLMConfig
+    CheckLLMConfig --> ExternalLLMCall : credentials available
+    CheckLLMConfig --> LocalFallback : credentials unavailable
+    ExternalLLMCall --> ParsedLLMResult : provider returns usable response
+    ExternalLLMCall --> LocalFallback : provider error or invalid response
+  }
+
+  ParsedLLMResult --> BuildAnalyzeResponse : use LLM classification and explanation
+  LocalFallback --> BuildAnalyzeResponse : use rule-based classification
+  ValidationError --> BuildErrorResponse : return validation failure
+}
+
+RouteHandlerRuns --> RequestLogged : route response captured
+
+state RequestLogged {
+  [*] --> WriteRequestRow
+  WriteRequestRow --> WriteAnomalyRow : anomaly is not Normal
+  WriteRequestRow --> SkipAnomalyRow : anomaly is Normal
+  WriteAnomalyRow --> UpdateDashboardMetrics
+  SkipAnomalyRow --> UpdateDashboardMetrics
+  UpdateDashboardMetrics --> [*]
+}
+
+RequestLogged --> [*] : response returned to browser or API client
+
+@enduml

@@ -1,0 +1,148 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+title Security Monitoring System - Class Diagram
+
+package "Application Entry Point" {
+  class MainApp {
+    FastAPI app
+    register middleware
+    include API router
+    define UI pages
+    create schema on startup
+  }
+}
+
+package "Controller / UI Layer" {
+  class APIRoutes {
+    GET /api/
+    POST /api/analyze
+    GET /api/dashboard/metrics
+    GET /api/health
+    GET /api/query/{name}
+  }
+
+  class UIViews {
+    GET /
+    GET /analyze
+    GET /dashboard
+    GET /api/query/logs
+  }
+}
+
+package "Request Middleware Layer" {
+  class SecurityMiddleware {
+    session tracking
+    rate limit check
+    request body buffering
+    anomaly inspection
+    request logging
+  }
+}
+
+package "Service Layer" {
+  class SecurityService {
+    execute_query()
+    upsert_session()
+    record_request()
+    analyze_request()
+    get_dashboard_metrics()
+  }
+
+  class SecurityChecks {
+    detect_anomaly()
+    rate_limit_exceeded()
+    get_defense_response()
+  }
+
+  class LLMService {
+    retrieve_context()
+    _parse_llm_response()
+    _call_external_llm()
+    analyze_with_llm()
+  }
+}
+
+package "Data / Model Layer" {
+  class AnalyzeRequest {
+    path
+    method
+    payload
+    metadata
+  }
+
+  class AnalyzeResponse {
+    status
+    request_id
+    session_id
+    anomaly
+    analysis
+    defense
+  }
+
+  class Database {
+    get_connection()
+    run_sql()
+    ensure_schema()
+  }
+
+  class SessionsTable {
+    session_id
+    ip
+    user_agent
+    request_count
+    anomaly_count
+  }
+
+  class RequestsTable {
+    session_id
+    endpoint
+    method
+    payload
+    status_code
+    anomaly_type
+    analysis_source
+    llm_used
+  }
+
+  class AnomaliesTable {
+    request_id
+    session_id
+    anomaly_type
+    severity
+    action
+    rule
+    explanation
+    recommendation
+  }
+}
+
+MainApp --> APIRoutes : registers /api routes
+MainApp --> UIViews : serves browser pages
+MainApp --> SecurityMiddleware : applies to incoming traffic
+MainApp --> Database : creates schema on startup
+
+SecurityMiddleware --> SecurityChecks : inspects payload and rate limit
+SecurityMiddleware --> SecurityService : records monitored requests
+
+APIRoutes --> AnalyzeRequest : validates JSON body
+APIRoutes --> SecurityService : delegates analysis and metrics
+APIRoutes --> AnalyzeResponse : returns structured result
+
+UIViews --> APIRoutes : browser calls API endpoints
+UIViews --> SecurityService : displays query/dashboard data
+
+SecurityService --> SecurityChecks : classifies local attack patterns
+SecurityService --> LLMService : requests optional LLM/RAG analysis
+SecurityService --> Database : reads/writes sessions, requests, anomalies
+
+LLMService --> Database : retrieves prior request context
+Database --> SessionsTable : creates and updates session records
+Database --> RequestsTable : writes monitored request records
+Database --> AnomaliesTable : writes detected anomaly evidence
+RequestsTable --> SessionsTable : session_id foreign key
+AnomaliesTable --> SessionsTable : session_id foreign key
+AnomaliesTable --> RequestsTable : request_id foreign key
+
+@enduml

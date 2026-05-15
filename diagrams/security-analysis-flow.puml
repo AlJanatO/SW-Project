@@ -1,0 +1,89 @@
+@startuml
+title Security Monitoring System - Security Analysis Flow
+skinparam shadowing false
+
+start
+:Receive JSON request payload;
+:Validate AnalyzeRequest model;
+
+partition "Rule-Based Detection" {
+  :Run detect_anomaly();
+
+  if (Attack pattern detected?) then (SQL injection)
+    #LightCoral:Classify as SQL Injection Attempt;
+    #LightCoral:Set severity = critical;
+  elseif (XSS)
+    #Orange:Classify as XSS Attempt;
+    #Orange:Set severity = high;
+  elseif (path traversal)
+    #Plum:Classify as Path Traversal Attempt;
+    #Plum:Set severity = high;
+  elseif (command injection)
+    #LightCoral:Classify as Command Injection Attempt;
+    #LightCoral:Set severity = critical;
+  elseif (recursive API abuse)
+    #Khaki:Classify as Recursive API Abuse;
+    #Khaki:Set severity = medium;
+  elseif (flood payload)
+    #Khaki:Classify as Possible Flood Attack;
+    #Khaki:Set severity = medium;
+  else (normal traffic)
+    #PaleGreen:Classify as Normal;
+    #PaleGreen:Set severity = low;
+  endif
+
+  :Store request in PostgreSQL;
+}
+
+partition "RAG Context Retrieval" {
+  :Retrieve related request history;
+  note right
+    The RAG step queries recent PostgreSQL request rows
+    and gives the optional LLM prior traffic context.
+    The app still works when no matching context exists.
+  end note
+}
+
+partition "LLM Analysis" {
+  :Check LLM environment configuration;
+
+  if (LLM configured?) then (yes)
+    :Attempt external LLM analysis;
+
+    if (Provider timeout or 429?) then (yes)
+      :Record LLM unavailable;
+      :Use rule-based fallback classification;
+    elseif (Invalid or untrusted classification?)
+      :Ignore invalid LLM classification;
+      :Use rule-based fallback classification;
+    else (valid response)
+      :Parse LLM JSON response;
+      :Use LLM classification and explanation;
+    endif
+  else (no)
+    :Skip external LLM call;
+    :Use rule-based fallback classification;
+  endif
+}
+
+:Build defense response;
+note right
+  Defense response fields:
+  - action
+  - severity
+  - rule
+  - reason
+  - recommendation
+end note
+
+if (Anomaly is Normal?) then (yes)
+  :Return allowed response;
+else (no)
+  :Store anomaly in PostgreSQL;
+  :Return blocked or reviewed response;
+endif
+
+:Return AnalyzeResponse;
+stop
+
+@enduml

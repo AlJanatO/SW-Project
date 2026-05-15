@@ -1,44 +1,71 @@
-# PROMPT C: LLM EVIDENCE FIELDS
+# Prompt C: Optional LLM/RAG Analysis
 
-## Phase
+## Requirement Area
 
-LLM auditability and verification.
+Optional LLM-assisted threat analysis and retrieval of prior request context from PostgreSQL.
 
-## Purpose
+## Objective
 
-Make the API response clearly show whether LLM reasoning was required, attempted, successfully used, or unavailable.
+Provide an optional LLM analysis layer that can classify and explain requests using the current payload plus relevant historical request context. The system must still work when LLM credentials are not configured.
 
-## Feature Goal
+## Implemented Behavior
 
-Add explicit LLM evidence fields to the analysis response.
+- `generate_payload_embedding()` converts request payloads into deterministic local vector embeddings.
+- `record_request()` stores each payload embedding in the `requests.payload_embedding` column.
+- `retrieve_context()` compares the current payload embedding against stored request embeddings using cosine similarity.
+- `_call_external_llm()` sends the payload and context to an external LLM provider when environment variables are configured.
+- `_parse_llm_response()` extracts JSON classification and explanation from the model output.
+- `analyze_with_llm()` falls back to local detection if the LLM is unavailable.
 
-## Fields To Add
+## Current Retrieval Scope
 
-- `llm_required`
-- `llm_attempted`
-- `llm_used`
-- `llm_error`
+The current RAG-style retrieval uses local vector embeddings stored in PostgreSQL as `JSONB`. The implementation avoids external embedding API calls and `pgvector` installation so it remains simple to run in the course environment while still ranking prior requests by vector similarity.
 
-## Why This Matters
+## Environment Variables
 
-The project uses an LLM as part of the security analysis path. The response should make that behavior visible for testing, debugging, and screenshots.
+- `LLM_API_URL`
+- `LLM_API_KEY`
+- `LLM_MODEL`
 
-Without these fields, an ambiguous request may show `llm_result: null`, but it is not obvious whether the LLM was skipped, unavailable, rate-limited, or not configured.
+## Response Evidence
 
-## Files To Change
+- `classification`
+- `rule_classification`
+- `context`
+- `context.retrieval_method`
+- `context.embedding_dimensions`
+- `context.similar_events[*].similarity`
+- `llm_result`
+- `explanation`
+
+## Files Involved
 
 - `security_system/llm.py`
+- `security_system/services.py`
 - `security_system/test_security.py`
 
-## Verification Tests
+## Acceptance Criteria
 
-Add or update tests for:
+- LLM parsing handles valid JSON.
+- LLM parsing handles markdown-wrapped JSON.
+- Plain text output falls back to safe/suspicious/attack keyword handling.
+- Missing credentials do not crash the application.
+- `/api/analyze` still returns a complete response when the LLM is unavailable.
+- Similar request context is ranked by local vector cosine similarity.
 
-1. Safe request does not require or attempt LLM.
-2. Suspicious request attempts LLM and records an error when the call fails.
-3. Suspicious request uses LLM result when the call succeeds.
+## Vector-Based Similarity Search
 
-## Manual Demo Payload
+The implemented retrieval path:
+
+- generates a normalized embedding from payload tokens
+- stores the embedding with the request record
+- loads recent embedded request records
+- ranks them by cosine similarity
+- returns the top eight events as LLM context
+
+A future production version could replace the local deterministic embedding with provider embeddings and `pgvector` nearest-neighbor queries.
+
+## Verification Payload
 
 ```json
 {
@@ -49,38 +76,3 @@ Add or update tests for:
   }
 }
 ```
-
-## Expected Evidence
-
-If the LLM provider is unavailable or rate-limited:
-
-```json
-{
-  "llm_required": true,
-  "llm_attempted": true,
-  "llm_used": false,
-  "llm_error": "..."
-}
-```
-
-If the LLM succeeds:
-
-```json
-{
-  "llm_required": true,
-  "llm_attempted": true,
-  "llm_used": true,
-  "llm_error": null
-}
-```
-
-## Completion Criteria
-
-- [ ] LLM evidence fields are present.
-- [ ] LLM failure does not crash the app.
-- [ ] Tests cover success and failure paths.
-- [ ] Manual screenshot can show LLM evidence.
-
-## Next Prompt
-
-`PROMPT-D-DOCUMENTATION.md`

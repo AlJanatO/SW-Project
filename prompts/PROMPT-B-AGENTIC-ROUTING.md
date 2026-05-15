@@ -1,82 +1,62 @@
-# PROMPT B: AGENTIC ROUTING UPGRADE
+# Prompt B: Local Detection and Defense Response
 
-## Phase
+## Requirement Area
 
-Security analysis improvement.
+Rule-based anomaly detection, attack classification, and professor-friendly defense response output.
 
-## Purpose
+## Objective
 
-Upgrade the request analysis flow so the system uses local specialized detection for clear cases and reserves LLM reasoning for ambiguous requests.
+Implement local security checks that identify common backend attack patterns and return an actionable defense response for each analyzed request.
 
-## Feature Goal
+## Implemented Detection Categories
 
-Replace a single string-only detection result with a structured routing decision.
+- SQL Injection Attempt
+- XSS Attempt
+- Path Traversal Attempt
+- Command Injection Attempt
+- Recursive API Abuse
+- Possible Flood Attack
+- Rate Limit Exceeded
+- Normal
 
-## Routing Decision Fields
+## Defense Response Fields
 
-The upgraded routing result should include:
-
-- `classification`
-- `attack_type`
-- `anomaly_type`
-- `confidence`
+- `action`
 - `severity`
-- `source`
+- `rule`
 - `reason`
-- `requires_llm`
+- `recommendation`
 
-## Expected Behavior
+## Expected Demo Behavior
 
-| Request Type | Expected Route |
+| Request Type | Expected Result |
 |---|---|
-| Normal login | safe local decision |
-| SQL injection | specialized classifier |
-| XSS | specialized classifier |
-| path traversal | specialized classifier |
-| command injection | specialized classifier |
-| large payload | suspicious review |
-| token or credential ambiguity | LLM route |
+| Normal login | allowed, low severity |
+| SQL injection | blocked, critical severity |
+| XSS | blocked, high severity |
+| Path traversal | blocked, high severity |
+| Command injection | blocked, critical severity |
+| Recursive API abuse | blocked, medium severity |
+| Oversized payload | blocked, medium severity |
 
-## Files To Change
+## Files Involved
 
 - `security_system/security.py`
 - `security_system/services.py`
-- `security_system/llm.py`
+- `security_system/models.py`
 - `security_system/test_security.py`
 
-Middleware should only change if the request logging path needs to avoid duplicate or heavy analysis.
+## Acceptance Criteria
 
-## Files Not To Change
+- Each attack type returns a clear anomaly label.
+- Each anomaly label maps to a defense response.
+- `/api/analyze` includes the defense object.
+- The analyze page renders defense details for demo explanation.
+- Tests cover normal and malicious payloads.
 
-- `.env`
-- database credentials
-- unrelated UI files
-- vulnerable simulation behavior
-- Git history outside manual commits
-
-## Verification Steps
-
-Run:
+## Verification Evidence
 
 ```bash
 python -m pytest test_security.py -v
 ```
 
-Manual checks:
-
-1. Normal request returns safe/normal.
-2. SQL injection returns attack/SQL Injection.
-3. Ambiguous token request sets LLM routing requirement.
-
-## Completion Criteria
-
-- [ ] Structured routing decision exists.
-- [ ] High-confidence attacks do not require LLM.
-- [ ] Normal traffic does not require LLM.
-- [ ] Ambiguous cases require LLM.
-- [ ] Tests pass.
-- [ ] Diff reviewed before commit.
-
-## Next Prompt
-
-`PROMPT-C-LLM-EVIDENCE.md`

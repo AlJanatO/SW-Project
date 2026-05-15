@@ -1,92 +1,57 @@
-# PROMPT A: BASELINE SECURITY SYSTEM
+# Prompt A: Core Security Monitoring Architecture
 
-## Phase
+## Requirement Area
 
-Core security monitor baseline.
+Baseline FastAPI application, MVC-style organization, API routing, and security monitoring flow.
 
-## Purpose
+## Objective
 
-Document and verify the existing FastAPI security monitoring behavior before adding larger features.
+Implement a web-based security monitoring system that accepts HTTP traffic, inspects request payloads, stores monitored activity in PostgreSQL, and exposes both API and browser-facing views for demonstration.
 
-## Existing Files
+## Implementation Scope
 
 - `security_system/main.py`
 - `security_system/api.py`
 - `security_system/middleware.py`
 - `security_system/services.py`
 - `security_system/security.py`
-- `security_system/llm.py`
 - `security_system/db.py`
 - `security_system/models.py`
-- `security_system/test_security.py`
+- `security_system/ui.py`
 
-## Existing Behavior
+## MVC Mapping
 
-The baseline system supports:
+| Layer | Project Files | Responsibility |
+|---|---|---|
+| View | `main.py`, `ui.py` | Browser pages, navigation, analyze form, dashboard display |
+| Controller | `api.py`, `main.py` | FastAPI route handlers and request routing |
+| Model | `models.py`, PostgreSQL schema | Pydantic validation and database tables |
+| Service | `services.py` | Request recording, analysis, metrics, query execution |
+| Security | `middleware.py`, `security.py`, `llm.py` | Session tracking, rate limits, anomaly detection, optional LLM analysis |
 
-- request logging
-- session tracking
-- rate limiting
-- anomaly detection
-- optional LLM analysis
-- dashboard metrics
-- health check output
-- pytest verification
+## Expected Behavior
 
-## Security Detection Categories
+- Start as a FastAPI application.
+- Register UI routes and API routes without route collision.
+- Track client sessions.
+- Apply rate limiting.
+- Inspect request payloads.
+- Store monitored request records.
+- Store anomaly records when attacks are detected.
+- Expose `/api/health`, `/api/analyze`, `/api/dashboard/metrics`, `/dashboard`, `/analyze`, and `/docs`.
 
-`detect_anomaly()` checks for:
+## Acceptance Criteria
 
-- SQL injection
-- XSS
-- path traversal
-- command injection
-- recursive API abuse
-- flood-like payloads
-- normal traffic
+- The root page loads as HTML.
+- API routes are namespaced under `/api`.
+- The health page confirms database connectivity.
+- Requests can be analyzed through `/api/analyze`.
+- Dashboard metrics can be retrieved through `/api/dashboard/metrics`.
+- Automated tests pass.
 
-## LLM Behavior
-
-`analyze_with_llm()` retrieves context from previous logs and attempts an external LLM call if configured. If the LLM is unavailable, the system falls back to local detection.
-
-## Verification Steps
-
-Run tests from the `security_system` folder:
+## Verification Evidence
 
 ```bash
 python -m pytest test_security.py -v
-```
-
-Run the app:
-
-```bash
 python -m uvicorn main:app --reload
 ```
-
-Manual pages to check:
-
-- `/`
-- `/analyze`
-- `/dashboard`
-- `/api/health`
-- `/docs`
-
-## Acceptance Examples
-
-Normal request should return normal classification.
-
-SQL injection payload should be flagged.
-
-Dashboard should show request and anomaly counts after activity.
-
-## Completion Criteria
-
-- [ ] Tests pass.
-- [ ] App starts locally.
-- [ ] Normal request works.
-- [ ] Attack request is detected.
-- [ ] Dashboard and health pages load.
-
-## Next Prompt
-
-`PROMPT-B-AGENTIC-ROUTING.md`

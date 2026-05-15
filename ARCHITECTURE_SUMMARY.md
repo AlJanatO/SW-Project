@@ -92,4 +92,4 @@ Use local decision or route ambiguous case to LLM
 Return analysis with routing evidence
 ```
 
-This upgrade keeps the existing architecture but makes the LLM role more selective and easier to document in tests and screenshots.
+This upgrade keeps the existing architecture but makes the LLM role more selective and easier to document in tests and final submission evidence.

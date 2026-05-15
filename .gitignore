@@ -16,3 +16,6 @@ __pycache__/
 
 # logs (optional but good)
 *.log
+
+# tooling
+plantuml.jar

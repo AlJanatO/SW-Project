@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This document maps the implemented security monitoring system and the next analysis upgrade to the Software Requirements Specification.
+This document maps the implemented security monitoring system to the current Software Requirements Specification. It only describes features that exist in the current project files.
 
-## Current Baseline Compliance
+## Current Implementation Compliance
 
 | Requirement Area | Status | Evidence |
 |---|---|---|
@@ -13,6 +13,7 @@ This document maps the implemented security monitoring system and the next analy
 | PostgreSQL logging | Implemented | `security_system/db.py`, `services.record_request()` |
 | Session tracking | Implemented | `security_system/middleware.py` |
 | Rate limiting | Implemented | `security_system/security.py`, `SecurityMiddleware` |
+| Noise-filtered monitoring | Implemented | `SecurityMiddleware._should_log_request()` |
 | SQL injection detection | Implemented | `detect_anomaly()`, tests |
 | XSS detection | Implemented | `detect_anomaly()`, tests |
 | Path traversal detection | Implemented | `detect_anomaly()`, tests |
@@ -23,38 +24,29 @@ This document maps the implemented security monitoring system and the next analy
 | RAG-style context retrieval | Implemented | `retrieve_context()` |
 | API health check | Implemented | `/api/health` |
 | Dashboard metrics | Implemented | `/api/dashboard/metrics`, `/dashboard` |
+| Defense response | Implemented | `build_defense()`, `/api/analyze` |
+| Attack timeline | Implemented | `get_dashboard_metrics()` timeline field |
 | Unit and integration tests | Implemented | `security_system/test_security.py` |
-
-## Next Analysis Upgrade
-
-| Requirement | Status | Evidence After Implementation |
-|---|---|---|
-| Structured routing decision | Planned | `route_security_analysis()` |
-| Specialized lightweight classifiers | Planned | Security routing tests |
-| LLM escalation for ambiguous cases | Planned | `requires_llm`, `llm_required` |
-| Explicit LLM attempt evidence | Planned | `llm_attempted`, `llm_used`, `llm_error` |
-| Safe fallback when LLM fails | Planned | LLM failure tests |
-| Reduced false positives for normal traffic | Planned | Normal login test |
 
 ## Compliance Notes
 
-The submitted system satisfies the core requirements for a security monitoring API. The next analysis upgrade strengthens the LLM integration by making routing decisions explicit and testable.
+The submitted system satisfies the core requirements for a security monitoring API. It records monitored requests in PostgreSQL, detects common web attack patterns, returns a defense response for analyzed requests, and visualizes recent activity on the dashboard timeline.
 
-## Verification Evidence To Collect
+The current database design uses three runtime tables:
+
+- `sessions`
+- `requests`
+- `anomalies`
+
+The request-log view is backed by the `requests` table. A separate duplicate `logs` table is not used in the current schema.
+
+## Verification Evidence To Collect During Demo
 
 - Pytest output showing all tests passing.
-- Screenshot of `/api/health` showing database and LLM configuration status.
-- Screenshot of normal request analysis.
-- Screenshot of SQL injection analysis.
-- Screenshot of XSS analysis.
-- Screenshot of ambiguous LLM-routed request analysis after the routing upgrade.
-- Screenshot of `/dashboard` showing logged activity.
-- Screenshot of `/docs` showing generated API documentation.
-- Screenshot of GitHub network showing incremental commits.
-
-## Remaining Work
-
-- Implement and commit the routing upgrade.
-- Implement and commit explicit LLM evidence fields.
-- Capture acceptance test screenshots.
-- Add final diagrams and presentation materials.
+- Manual run evidence for `/api/health`.
+- Manual run evidence for normal request analysis.
+- Manual run evidence for SQL injection analysis.
+- Manual run evidence for XSS analysis.
+- Manual run evidence for path traversal, command injection, recursive abuse, or flood payload analysis.
+- Manual run evidence for `/dashboard`.
+- Manual run evidence for `/docs`.

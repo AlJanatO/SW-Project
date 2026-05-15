@@ -15,6 +15,15 @@ def _header(scope, name: bytes, default: str = "") -> str:
     return default
 
 
+def _should_log_request(path: str) -> bool:
+    # Page loads and dashboard polling create duplicate demo data, so only security-relevant
+    # API/simulation traffic is written to PostgreSQL.
+    skipped_paths = {"/", "/docs", "/swagger", "/analyze", "/dashboard", "/api/dashboard/metrics"}
+    if path in skipped_paths or path.startswith("/swagger/"):
+        return False
+    return path.startswith("/api/analyze") or path.startswith("/api/query") or path.startswith("/vuln")
+
+
 class SecurityMiddleware:
     def __init__(self, app):
         self.app = app
@@ -26,6 +35,7 @@ class SecurityMiddleware:
         start_time = time.time()
         method = scope["method"]
         path = scope["path"]
+        should_log = _should_log_request(path)
         ip = (scope.get("client") or ("unknown", 0))[0]
         user_agent = _header(scope, b"user-agent", "unknown")
         cookie_header = _header(scope, b"cookie", "")
@@ -41,7 +51,7 @@ class SecurityMiddleware:
         if not session_id:
             session_id = str(uuid.uuid4())
             new_session = True
-        session_id = upsert_session(ip, user_agent, session_id)
+        session_id = upsert_session(ip, user_agent, session_id) if should_log else session_id
  
         max_requests = int(os.getenv("RATE_LIMIT_REQUESTS", "60"))
         window_seconds = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"))
@@ -51,15 +61,16 @@ class SecurityMiddleware:
             headers = [(b"content-type", b"application/json"), (b"content-length", str(len(body)).encode("utf-8"))]
             await send({"type": "http.response.start", "status": 429, "headers": headers})
             await send({"type": "http.response.body", "body": body, "more_body": False})
-            record_request(
-                session_id=session_id,
-                ip=ip,
-                endpoint=path,
-                method=method,
-                payload={"method": method, "path": path},
-                status_code=429,
-                anomaly_type="Rate Limit Exceeded",
-            )
+            if should_log:
+                record_request(
+                    session_id=session_id,
+                    ip=ip,
+                    endpoint=path,
+                    method=method,
+                    payload={"method": method, "path": path, "source": "middleware_rate_limit"},
+                    status_code=429,
+                    anomaly_type="Rate Limit Exceeded",
+                )
             return
  
         # Buffer the request body so detect_anomaly can inspect it
@@ -87,6 +98,7 @@ class SecurityMiddleware:
             "path": path,
             "ip": ip,
             "session_id": session_id,
+            "source": "middleware",
             "body": body_text,
         }
  
@@ -122,12 +134,13 @@ class SecurityMiddleware:
  
         await self.app(scope, replay_receive, send_wrapper)
         elapsed_ms = int((time.time() - start_time) * 1000)
-        record_request(
-            session_id=session_id,
-            ip=ip,
-            endpoint=path,
-            method=method,
-            payload={"method": method, "path": path, "duration_ms": elapsed_ms},
-            status_code=response_status,
-            anomaly_type=risk,
-        )
+        if should_log:
+            record_request(
+                session_id=session_id,
+                ip=ip,
+                endpoint=path,
+                method=method,
+                payload={"method": method, "path": path, "source": "middleware", "duration_ms": elapsed_ms},
+                status_code=response_status,
+                anomaly_type=risk,
+            )

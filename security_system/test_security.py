@@ -197,6 +197,18 @@ class TestLLMResponseParser:
         result = _parse_llm_response(raw)
         assert result["classification"] == "suspicious"
 
+    def test_payload_embedding_is_normalized(self):
+        from llm import EMBEDDING_DIMENSIONS, generate_payload_embedding
+        embedding = generate_payload_embedding({"username": "admin' OR '1'='1"})
+        assert len(embedding) == EMBEDDING_DIMENSIONS
+        assert any(value > 0 for value in embedding)
+        assert sum(value * value for value in embedding) == pytest.approx(1.0, rel=1e-4)
+
+    def test_cosine_similarity_identical_vectors(self):
+        from llm import _cosine_similarity, generate_payload_embedding
+        embedding = generate_payload_embedding({"path": "/login", "payload": {"user": "admin"}})
+        assert _cosine_similarity(embedding, embedding) == pytest.approx(1.0, rel=1e-4)
+
 
 # ── Pydantic model validation tests ──
 
@@ -234,6 +246,7 @@ class TestModels:
             request_id=1,
             session_id="abc-123",
             anomaly="Normal",
+            defense={"action": "allowed", "severity": "low"},
             analysis={"classification": "safe"}
         )
         assert resp.status == "analyzed"
@@ -246,7 +259,7 @@ class TestModels:
 class TestQueries:
     """Tests for the query registry."""
 
-    def test_logs_query_exists(self):
+    def test_request_logs_query_exists(self):
         from queries import get_query
         assert get_query("logs") is not None
 
@@ -302,6 +315,7 @@ class TestAPIEndpoints:
         data = response.json()
         assert data["status"] == "analyzed"
         assert data["anomaly"] == "Normal"
+        assert data["defense"]["action"] == "allowed"
  
     def test_analyze_detects_sql_injection(self):
         if not self.has_db:
@@ -314,6 +328,8 @@ class TestAPIEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert data["anomaly"] == "SQL Injection Attempt"
+        assert data["defense"]["action"] == "blocked"
+        assert data["defense"]["severity"] == "critical"
  
     def test_analyze_rejects_invalid_payload(self):
         if not self.has_db:
@@ -332,6 +348,7 @@ class TestAPIEndpoints:
         data = response.json()
         assert "total_requests_24h" in data
         assert "anomaly_requests_24h" in data
+        assert "timeline" in data
  
     def test_health_check_endpoint(self):
         if not self.has_db:
@@ -340,7 +357,7 @@ class TestAPIEndpoints:
         assert response.status_code == 200
         assert "System Health Check" in response.text
  
-    def test_logs_query_endpoint(self):
+    def test_request_logs_query_endpoint(self):
         if not self.has_db:
             pytest.skip("Database not available")
         response = self.client.get("/api/query/logs")

@@ -6,6 +6,7 @@ load_dotenv()
 
 
 def get_connection():
+    # Database settings come from .env so local passwords are not stored in project files.
     return psycopg2.connect(
         host=os.getenv("DB_HOST"),
         dbname=os.getenv("DB_NAME"),
@@ -16,6 +17,7 @@ def get_connection():
 
 
 def run_sql(query, params=None):
+    # All database access goes through this helper so parameterized queries stay consistent.
     conn = get_connection()
     cur = conn.cursor()
 
@@ -34,6 +36,7 @@ def run_sql(query, params=None):
 
 
 def ensure_schema():
+    # Startup creates the tables needed for the demo. database/schema.sql mirrors this structure.
     statements = [
         """
         CREATE TABLE IF NOT EXISTS sessions (
@@ -57,6 +60,9 @@ def ensure_schema():
             payload JSONB DEFAULT '{}'::jsonb,
             status_code INT,
             anomaly_type TEXT,
+            analysis_source TEXT DEFAULT 'rule-based',
+            llm_used BOOLEAN NOT NULL DEFAULT FALSE,
+            payload_embedding JSONB DEFAULT '[]'::jsonb,
             created_at TIMESTAMP NOT NULL DEFAULT NOW()
         )
         """,
@@ -67,17 +73,54 @@ def ensure_schema():
             session_id TEXT NOT NULL,
             anomaly_type TEXT NOT NULL,
             severity TEXT NOT NULL,
+            action TEXT,
+            rule TEXT,
             explanation TEXT NOT NULL,
+            recommendation TEXT,
             created_at TIMESTAMP NOT NULL DEFAULT NOW()
         )
+        """,
+        "ALTER TABLE requests ADD COLUMN IF NOT EXISTS analysis_source TEXT DEFAULT 'rule-based'",
+        "ALTER TABLE requests ADD COLUMN IF NOT EXISTS llm_used BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE requests ADD COLUMN IF NOT EXISTS payload_embedding JSONB DEFAULT '[]'::jsonb",
+        "ALTER TABLE anomalies ADD COLUMN IF NOT EXISTS action TEXT",
+        "ALTER TABLE anomalies ADD COLUMN IF NOT EXISTS rule TEXT",
+        "ALTER TABLE anomalies ADD COLUMN IF NOT EXISTS recommendation TEXT",
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM pg_constraint WHERE conname = 'fk_requests_session_id'
+            ) THEN
+                ALTER TABLE requests
+                ADD CONSTRAINT fk_requests_session_id
+                FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+                ON DELETE CASCADE NOT VALID;
+            END IF;
+        END $$;
         """,
         """
-        CREATE TABLE IF NOT EXISTS logs (
-            id SERIAL PRIMARY KEY,
-            payload JSONB DEFAULT '{}'::jsonb,
-            created_at TIMESTAMP NOT NULL DEFAULT NOW()
-        )
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM pg_constraint WHERE conname = 'fk_anomalies_session_id'
+            ) THEN
+                ALTER TABLE anomalies
+                ADD CONSTRAINT fk_anomalies_session_id
+                FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+                ON DELETE CASCADE NOT VALID;
+            END IF;
+        END $$;
         """,
+        "CREATE INDEX IF NOT EXISTS idx_requests_session_id ON requests(session_id)",
+        "CREATE INDEX IF NOT EXISTS idx_requests_created_at ON requests(created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_requests_anomaly_type ON requests(anomaly_type)",
+        "CREATE INDEX IF NOT EXISTS idx_requests_analysis_source ON requests(analysis_source)",
+        "CREATE INDEX IF NOT EXISTS idx_requests_payload_embedding ON requests USING GIN(payload_embedding)",
+        "CREATE INDEX IF NOT EXISTS idx_anomalies_session_id ON anomalies(session_id)",
+        "CREATE INDEX IF NOT EXISTS idx_anomalies_created_at ON anomalies(created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_anomalies_severity ON anomalies(severity)",
+        "CREATE INDEX IF NOT EXISTS idx_anomalies_type ON anomalies(anomaly_type)",
     ]
 
     for statement in statements:

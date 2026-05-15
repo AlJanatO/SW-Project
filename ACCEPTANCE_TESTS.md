@@ -1,8 +1,8 @@
-# Acceptance Tests
+# Acceptance Tests for Security Monitoring System
 
 ## Purpose
 
-This document defines acceptance tests for the security monitoring system. Each acceptance test should be executed manually before final submission and illustrated with screenshots.
+This document describes the manual acceptance tests for the FastAPI security monitoring system. The tests cover the main user-facing pages, request analysis workflow, local attack detection, optional LLM fallback behavior, dashboard metrics, and generated API documentation.
 
 ## Test Environment
 
@@ -15,6 +15,7 @@ This document defines acceptance tests for the security monitoring system. Each 
   - `http://127.0.0.1:8000/dashboard`
   - `http://127.0.0.1:8000/api/health`
   - `http://127.0.0.1:8000/docs`
+- Test data source: manual JSON payloads submitted through the `/analyze` page or `/api/analyze` endpoint
 
 ## AT-1: Application Starts Successfully
 
@@ -30,10 +31,6 @@ Verify that the FastAPI application starts and serves the main page.
 ### Expected Result
 
 The main page loads successfully and introduces the security monitoring system.
-
-### Screenshot
-
-TODO: Add screenshot of the main page.
 
 ## AT-2: Normal Request Is Accepted
 
@@ -58,10 +55,6 @@ Verify that normal user behavior is not flagged as an attack.
 
 The system should classify the request as normal or safe.
 
-### Screenshot
-
-TODO: Add screenshot of the `/analyze` result.
-
 ## AT-3: SQL Injection Is Detected
 
 ### Objective
@@ -85,10 +78,6 @@ Verify that the system detects SQL injection attempts.
 
 The system should flag the request as a SQL injection attempt.
 
-### Screenshot
-
-TODO: Add screenshot of the SQL injection result.
-
 ## AT-4: XSS Attempt Is Detected
 
 ### Objective
@@ -111,10 +100,6 @@ Verify that the system detects XSS payloads.
 
 The system should flag the request as an XSS attempt.
 
-### Screenshot
-
-TODO: Add screenshot of the XSS result.
-
 ## AT-5: Flood-Like Payload Is Detected
 
 ### Objective
@@ -123,15 +108,23 @@ Verify that unusually large payloads are flagged.
 
 ### Input
 
-Submit a request containing a very large string payload.
+Submit a request with a payload field containing a string longer than the flood threshold used by `detect_anomaly()`.
+
+Example structure:
+
+```json
+{
+  "path": "/upload",
+  "method": "POST",
+  "payload": {
+    "content": "large repeated string"
+  }
+}
+```
 
 ### Expected Result
 
 The system should flag the request as a possible flood attack.
-
-### Screenshot
-
-TODO: Add screenshot of the flood detection result.
 
 ## AT-6: LLM/RAG Analysis Returns Contextual Output
 
@@ -156,9 +149,9 @@ The response includes:
 
 If the LLM is unavailable, the system should fall back gracefully.
 
-### Screenshot
+### Notes
 
-TODO: Add screenshot of LLM analysis or fallback.
+During local testing, the LLM provider may return a rate-limit response such as HTTP 429. That result is acceptable as long as the application returns a normal API response and falls back instead of crashing.
 
 ## AT-7: Health Check Shows Component Status
 
@@ -173,10 +166,6 @@ Verify that the health endpoint reports database and LLM configuration status.
 ### Expected Result
 
 The page shows database status, request count, anomaly count, active sessions, and LLM configuration status.
-
-### Screenshot
-
-TODO: Add screenshot of health check.
 
 ## AT-8: Dashboard Shows Activity
 
@@ -193,10 +182,6 @@ Verify that logged requests and anomalies are visible through dashboard metrics.
 
 The dashboard shows recent request and anomaly activity.
 
-### Screenshot
-
-TODO: Add screenshot of dashboard.
-
 ## AT-9: FastAPI API Documentation Is Available
 
 ### Objective
@@ -211,15 +196,11 @@ Verify that generated API documentation is available.
 
 Swagger/OpenAPI documentation displays available API endpoints.
 
-### Screenshot
-
-TODO: Add screenshot of `/docs`.
-
-## AT-10: Planned Agentic Routing Demo
+## AT-10: Routing Upgrade Demo
 
 ### Objective
 
-After the agentic routing upgrade is implemented, verify that ambiguous security-sensitive requests are routed to the LLM.
+After the routing upgrade is implemented, verify that ambiguous security-sensitive requests are routed to the LLM instead of being treated exactly like clear local detections.
 
 ### Input
 
@@ -233,7 +214,7 @@ After the agentic routing upgrade is implemented, verify that ambiguous security
 }
 ```
 
-### Expected Result After Upgrade
+### Expected Result After Routing Upgrade
 
 The response should show that LLM routing was required and attempted.
 
@@ -245,6 +226,13 @@ Expected evidence fields after upgrade:
 - `llm_used`
 - `llm_error`
 
-### Screenshot
+## Test Results Summary
 
-TODO: Add screenshot after implementation.
+### Pass Criteria
+
+- The app starts without startup errors.
+- Normal traffic is not labeled as a known attack.
+- SQL injection and XSS payloads are detected.
+- LLM unavailability does not crash `/api/analyze`.
+- Health and dashboard pages load.
+- FastAPI documentation is visible at `/docs`.

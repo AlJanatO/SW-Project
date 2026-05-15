@@ -14,6 +14,8 @@ python -m pytest test_security.py -v
 
 ## Test Areas
 
+The test suite is organized around the main responsibilities of the project: local detection, request throttling, LLM parsing, data model validation, query lookup, and API endpoint behavior.
+
 ### Security Detection Tests
 
 These tests verify that local anomaly detection identifies common attack patterns:
@@ -25,6 +27,8 @@ These tests verify that local anomaly detection identifies common attack pattern
 - recursive API abuse
 - flood-like payloads
 - normal traffic
+
+Representative test inputs include login-style payloads, SQL injection strings such as `admin' OR '1'='1`, script tags for XSS, path traversal strings, shell command separators, recursive endpoint references, and large payload content.
 
 ### Rate Limiting Tests
 
@@ -72,10 +76,26 @@ These tests verify major FastAPI endpoints:
 - health check endpoint
 - query display endpoint
 
+## Test Data Used
+
+The automated tests use small in-memory payload dictionaries rather than external fixture files. This keeps the tests simple and focused on behavior.
+
+Common payload examples include:
+
+- normal login request
+- SQL injection login attempt
+- XSS comment submission
+- path traversal payload
+- command injection payload
+- large string payload
+- invalid request model values
+
+Database-dependent tests use monkeypatching or skip behavior when the database is not configured, so local development can continue without a live database for every test run.
+
 ## Notes
 
 Some endpoint tests depend on the application and database being available. If the database is not available, those tests are designed to skip rather than fail because the purpose is to test the API when the environment is configured.
 
-## Evidence To Capture
+## Test Results Status
 
-Before final submission, run the test command and capture a screenshot showing the passing test summary.
+Automated test coverage is documented here. Final pass/fail evidence should be collected from a real pytest run before submission.

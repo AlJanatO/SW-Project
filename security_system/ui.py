@@ -63,7 +63,7 @@ def layout(content: str) -> str:
                 <a href="/">Home</a>
                 <a href="/dashboard">Dashboard</a>
                 <a href="/api/health">Health</a>
-                <a href="/api/query/logs">Logs</a>
+                <a href="/api/query/logs">Request Logs</a>
                 <a href="/analyze">Analyze</a>
                 <a href="/docs">API Docs</a>
             </div>

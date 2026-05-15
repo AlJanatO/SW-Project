@@ -16,7 +16,7 @@ to service logic and database queries.
 
 The system supports:
 
-- Service operations (query execution and request logging)
+- Service operations (query execution and monitored request storage)
 - Vulnerable endpoints (simulated insecure behavior)
 - Security monitoring middleware
 - Defensive security controls
@@ -27,7 +27,7 @@ The system supports:
 The system shall:
 
 - Expose REST API endpoints using FastAPI
-- Execute predefined SQL queries for request logs
+- Execute predefined SQL queries for monitored request records
 - Return structured JSON and HTML responses
 - Provide a system health check endpoint
 
@@ -51,6 +51,7 @@ The system shall:
 - Detect command injection attempts
 - Detect recursive API abuse
 - Detect flood attacks via payload size analysis
+- Avoid storing noisy browser page loads and dashboard polling as security events.
 
 3.4 Defense Layer
 The system shall:
@@ -59,19 +60,21 @@ The system shall:
 - Use parameterized SQL queries
 - Apply rate limiting on endpoints
 - Log and flag detected threats for analysis
+- Return a defense response with action, severity, rule, reason, and recommendation.
 - Vulnerable simulation endpoints intentionally bypass safety controls for educational demonstration.
 
 3.5 Logging System
 The system shall:
 
-- Store all requests in PostgreSQL
+- Store monitored API and simulation requests in PostgreSQL
 - Track normal and attack events
 - Support analysis of attack patterns
+- Provide timeline-ready request data using stored creation timestamps.
 
 4. Non-Functional Requirements
 - System shall handle concurrent API requests
 - Response time should remain under acceptable limits
-- Logs must be persistent in PostgreSQL
+- Monitored request records must be persistent in PostgreSQL
 - Security checks must not block normal usage
 
 5. LLM + RAG INTEGRATION DESIGN
@@ -83,18 +86,18 @@ Retrieval-Augmented Generation (RAG) approach.
 5.1 RAG Architecture
 
 Instead of training a model, the system retrieves relevant context
-from stored logs and feeds it to the LLM.
+from stored request records and feeds it to the LLM.
 
 Two detection paths:
  
-Path 1 (All requests):
-  Request → Middleware → Rule-based detection → Log to PostgreSQL
+Path 1 (Monitored API/simulation requests):
+  Request → Middleware → Rule-based detection → Store request in PostgreSQL
  
 Path 2 (/api/analyze only):
   User submits payload → Rule-based detection
       → Retrieve similar past events from PostgreSQL (RAG)
       → Send payload + context to LLM
-      → LLM classification + explanation
+      → Defense response + optional LLM classification and explanation
       → Response returned + stored
 
 Flow Diagram (Logical)-for analyze endpoint only.
@@ -102,13 +105,13 @@ API Request
      ↓
 FastAPI Middleware
      ↓
-Log stored in PostgreSQL
+Request record stored in PostgreSQL
      ↓
 Retrieve similar past events (RAG step)
      ↓
 Send:
   - current request
-  - retrieved logs
+  - retrieved request records
   - system rules
      ↓
 LLM (analysis engine)
@@ -130,73 +133,10 @@ Response returned + stored
 - Provide natural language explanations of threat assessments
 - Augment rule-based detection with contextual AI analysis
 
-Prompts:
+Implementation notes:
 
-#1: 
-Create a FastAPI service that takes:
-- current HTTP request log
-- retrieved similar logs from Postgres
-
-Send both to an LLM API and return:
-- classification (safe / suspicious / attack)
-- explanation
-Use a clean service layer design.
-
-## Response:
-def analyze_request(current_log, similar_logs):
-    context = {
-        "current": current_log,
-        "history": similar_logs
-    }
-
-    response = llm_client.chat(
-        messages=[
-            {"role": "system",
-             "content": "You are a security analyzer."},
-            {"role": "user",
-             "content": str(context)}
-        ]
-    )
-
-    return response
-
-#2:
-Write a PostgreSQL query function that retrieves
-similar past request logs based on IP and payload
-patterns for RAG context.
-
-##Response:
-def get_similar_logs(ip, payload):
-    conn = get_connection()
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT * FROM logs
-        WHERE ip = %s
-        OR payload ILIKE %s
-        ORDER BY timestamp DESC
-        LIMIT 10
-    """, (ip, f"%{payload}%"))
-
-    return cur.fetchall()
-
-#3:
-Create FastAPI middleware that logs all requests
-and sends suspicious ones to an LLM analyzer.
-
-##Response:
-@app.middleware("http")
-async def security_middleware(request, call_next):
-    body = await request.body()
-
-    log_request(request, body)
-
-    if is_suspicious(body):
-        similar = get_similar_logs(request.client.host, body)
-
-        analysis = analyze_request(body, similar)
-
-        store_analysis(analysis)
-
-    response = await call_next(request)
-    return response
+- `security_system/security.py` contains local anomaly detection and defense response mapping.
+- `security_system/services.py` records analyzed requests, stores anomalies, calls optional LLM analysis, and builds dashboard metrics.
+- `security_system/middleware.py` performs session tracking, rate limiting, and noise-filtered monitoring.
+- `security_system/llm.py` retrieves previous request records from PostgreSQL for optional RAG-style context.
+- `security_system/main.py` provides the browser demo pages for analysis, health checking, API documentation, and dashboard visualization.

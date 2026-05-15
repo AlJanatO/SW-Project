@@ -1,46 +1,78 @@
 import json
 import logging
+import math
 import os
 import ssl
+import re
 import urllib.request
 
 import certifi
 
-from db import run_sql
+from db import ensure_schema, run_sql
 
 ssl_context = ssl.create_default_context(cafile=certifi.where())
 
 log = logging.getLogger(__name__)
 
 VALID_CLASSIFICATIONS = {"safe", "suspicious", "attack"}
+EMBEDDING_DIMENSIONS = 32
+
+
+def generate_payload_embedding(payload: dict) -> list[float]:
+    payload_text = json.dumps(payload, sort_keys=True).lower()
+    tokens = re.findall(r"[a-z0-9_./'=-]+", payload_text)
+    vector = [0.0] * EMBEDDING_DIMENSIONS
+    for token in tokens:
+        bucket = sum(ord(char) for char in token) % EMBEDDING_DIMENSIONS
+        vector[bucket] += 1.0
+    magnitude = math.sqrt(sum(value * value for value in vector))
+    if not magnitude:
+        return vector
+    return [round(value / magnitude, 6) for value in vector]
+
+
+def _cosine_similarity(left: list[float], right: list[float]) -> float:
+    if not left or not right or len(left) != len(right):
+        return 0.0
+    return sum(a * b for a, b in zip(left, right))
 
 
 def retrieve_context(payload: dict, ip: str = ""):
-    payload_text = json.dumps(payload)
-    keyword = payload_text[:80]
+    ensure_schema()
+    query_embedding = generate_payload_embedding(payload)
     rows = run_sql(
         """
-        SELECT endpoint, method, payload, anomaly_type, created_at
+        SELECT endpoint, method, payload, anomaly_type, created_at, payload_embedding
         FROM requests
-        WHERE ip = %s
-           OR CAST(payload AS TEXT) ILIKE %s
+        WHERE payload_embedding IS NOT NULL
+           OR ip = %s
         ORDER BY created_at DESC
-        LIMIT 8
+        LIMIT 50
         """,
-        (ip, f"%{keyword}%"),
+        (ip,),
     )
-    events = []
+    ranked_events = []
     for row in rows:
-        events.append(
+        stored_embedding = row[5] or []
+        similarity = _cosine_similarity(query_embedding, stored_embedding)
+        if ip and similarity == 0.0:
+            similarity = 0.05
+        ranked_events.append(
             {
                 "endpoint": row[0],
                 "method": row[1],
                 "payload": row[2],
                 "anomaly_type": row[3],
                 "created_at": str(row[4]),
+                "similarity": round(similarity, 4),
             }
         )
-    return {"similar_events": events}
+    ranked_events.sort(key=lambda event: event["similarity"], reverse=True)
+    return {
+        "retrieval_method": "local-vector-cosine",
+        "embedding_dimensions": EMBEDDING_DIMENSIONS,
+        "similar_events": ranked_events[:8],
+    }
 
 def _parse_llm_response(raw_text: str) -> dict:
     """Parse the LLM response text into classification and explanation."""

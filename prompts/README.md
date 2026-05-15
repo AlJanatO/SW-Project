@@ -1,45 +1,49 @@
-# Security Monitor Development Prompts
+# Security Monitor Prompt Documentation
 
-This folder contains the development prompts used to build and document the security monitoring project in phases.
+This folder documents the prompts and implementation checkpoints used to develop the FastAPI security monitoring project. The files are written as professional prompt specifications rather than chat transcripts.
 
-Each prompt is written as a small project checkpoint with:
+Each prompt document includes:
 
-- the feature goal
-- the files involved
-- verification steps
-- the reason for the change
-- the next checkpoint
+- project context
+- objective
+- implementation scope
+- affected files
+- acceptance criteria
+- verification evidence
 
-## Prompt Sequence
+## Prompt Index
 
-| Prompt | Title | Purpose |
-|---|---|---|
-| `PROMPT-A-BASELINE-SECURITY.md` | Baseline Security System | Documents the existing FastAPI, PostgreSQL, middleware, and detection flow |
-| `PROMPT-B-AGENTIC-ROUTING.md` | Agentic Routing Upgrade | Defines the next implementation step for specialized classifier + LLM routing |
-| `PROMPT-C-LLM-EVIDENCE.md` | LLM Evidence Fields | Defines how to make LLM usage visible in responses and tests |
+| File | Area Documented |
+|---|---|
+| `PROMPT-A-BASELINE-SECURITY.md` | Core FastAPI security monitor architecture |
+| `PROMPT-B-AGENTIC-ROUTING.md` | Implemented defense response and local detection routing |
+| `PROMPT-C-LLM-EVIDENCE.md` | Optional LLM/RAG integration and fallback behavior |
+| `PROMPT-D-DASHBOARD-DEMO.md` | Analyze page presets and dashboard timeline demo |
+| `PROMPT-E-DATABASE-SCHEMA.md` | PostgreSQL schema and request/anomaly persistence |
+| `PROMPT-F-TESTING-DOCUMENTATION.md` | Pytest coverage and submission documentation alignment |
+| `PROMPT-G-STARTUP-ROUTING-FIXES.md` | Startup reliability, route collision resolution, and API/UI namespace separation |
+| `PROMPT-H-LLM-RELIABILITY-FIXES.md` | LLM/RAG parsing, evidence reporting, and fallback behavior |
 
-## Development Flow
+## Documentation Standard
 
-```text
-Baseline security monitor
-   ↓
-Agentic routing upgrade
-   ↓
-LLM usage evidence
-   ↓
-Acceptance tests and documentation updates
-```
+The prompt files are intended to show a structured development process:
 
-## Verification Rule
+1. identify the project requirement
+2. define the expected system behavior
+3. identify the files that implement the behavior
+4. describe the acceptance checks
+5. connect the result to the final demo
 
-Before moving from one prompt to the next:
+## Current Project Scope
 
-1. Inspect the diff.
-2. Run relevant tests.
-3. Check the app manually if the prompt changes behavior.
-4. Commit the completed checkpoint.
-5. Continue with the next prompt.
+The current submitted system is a working security monitoring application with:
 
-## Current Project Direction
-
-The project starts as a working FastAPI security monitor with rule-based detection and optional LLM analysis. The next major feature is an agentic routing upgrade that uses local specialized classifiers for obvious attacks and reserves LLM calls for ambiguous security-sensitive requests.
+- FastAPI routes and HTML pages
+- PostgreSQL persistence
+- middleware-based monitoring
+- rule-based anomaly detection
+- defense response generation
+- optional LLM/RAG analysis
+- analyze-page preset payloads
+- live dashboard metrics and timeline
+- pytest verification

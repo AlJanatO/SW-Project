@@ -1,0 +1,51 @@
+{
+  "normal_login": {
+    "path": "/login",
+    "method": "POST",
+    "payload": {
+      "username": "student",
+      "password": "normal-password"
+    }
+  },
+  "sql_injection_login": {
+    "path": "/login",
+    "method": "POST",
+    "payload": {
+      "username": "admin' OR '1'='1",
+      "password": "x"
+    }
+  },
+  "xss_comment": {
+    "path": "/comment",
+    "method": "POST",
+    "payload": {
+      "message": "<script>alert('xss')</script>"
+    }
+  },
+  "path_traversal_file_request": {
+    "path": "/files/../../../etc/passwd",
+    "method": "GET",
+    "payload": {}
+  },
+  "command_injection_payload": {
+    "path": "/run",
+    "method": "POST",
+    "payload": {
+      "command": "status; cat /etc/passwd"
+    }
+  },
+  "recursive_api_abuse": {
+    "path": "/fetch",
+    "method": "POST",
+    "payload": {
+      "url": "http://127.0.0.1:8000/vuln/recursive"
+    }
+  },
+  "ambiguous_llm_review": {
+    "path": "/review",
+    "method": "POST",
+    "payload": {
+      "message": "please review this admin token behavior"
+    }
+  }
+}

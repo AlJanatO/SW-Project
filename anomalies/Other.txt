@@ -1,9 +1,0 @@
-{"path":"/api/upload","method":"POST","payload":{"filename":"weird_encoded_payload.bin","metadata":"unknown_behavior_detected"}}
-
-{"path":"/internal/service","method":"POST","payload":{"data":"%%%%%%%INVALID%%%%%%%"}}
-
-{"path":"/api/request","method":"GET","payload":{"token":"null_null_null_null"}}
-
-{"path":"/sync/process","method":"POST","payload":{"state":"unexpected_recursion_trigger"}}
-
-{"path":"/analytics/run","method":"POST","payload":{"query":"RANDOM_UNKNOWN_SEQUENCE_9988"}}

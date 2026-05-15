@@ -70,7 +70,7 @@ DB_USER
 DB_PASSWORD
 ```
 
-Optional LLM values:
+LLM values:
 
 ```text
 LLM_API_URL
@@ -78,7 +78,7 @@ LLM_API_KEY
 LLM_MODEL
 ```
 
-Optional vulnerable simulation setting:
+vulnerable simulation setting:
 
 ```text
 ENABLE_VULN_SIMULATION=true
@@ -106,12 +106,3 @@ From `security_system/`:
 python -m pytest test_security.py -v
 ```
 
-## Recommended Demo Flow
-
-1. Open `/api/health` to confirm the database connection.
-2. Open `/dashboard` to show the current request timeline.
-3. Open `/analyze`.
-4. Press `Normal`, then `Analyze`, and show the allowed defense response.
-5. Press `SQL Injection`, then `Analyze`, and show the blocked critical response.
-6. Press `XSS`, `Path Traversal`, `Command Injection`, `Recursive Abuse`, or `Flood Payload` to show additional attack categories.
-7. Return to `/dashboard` and click timeline dots to show stored event details.
